@@ -9,10 +9,12 @@
 
 - [一、Git 基础概念](#一git-基础概念)
 - [二、日常操作](#二日常操作)
-- [三、分支管理](#三分支管理)
-- [四、远程协作](#四远程协作)
-- [五、进阶技巧](#五进阶技巧)
-- [六、常见误区](#六常见误区)
+- [三、发布工作区项目到 GitHub](#三发布工作区项目到-github)
+- [四、配置自动同步](#四配置自动同步)
+- [五、分支管理](#五分支管理)
+- [六、远程协作](#六远程协作)
+- [七、进阶技巧](#七进阶技巧)
+- [八、常见误区](#八常见误区)
 
 ---
 
@@ -127,9 +129,93 @@ git reset --hard HEAD~1
 
 ---
 
-## 三、分支管理
+## 三、发布工作区项目到 GitHub
 
-### 3.1 分支概念
+### 3.1 场景说明
+
+你开发了一个 CodeBuddy 工作区项目（如 `股票分析`、`学习工作流` 等），想要将其推送到 GitHub 以便跨设备同步或分享。
+
+### 3.2 完整流程
+
+```bash
+# 第一步：进入项目目录
+cd ~/CodeBuddy/股票分析
+
+# 第二步：初始化仓库（如未初始化）
+git init
+git checkout -b main
+
+# 第三步：创建 .gitignore
+cat > .gitignore << 'EOF'
+.DS_Store
+node_modules/
+.env
+*.swp
+__pycache__/
+EOF
+
+# 第四步：首次提交
+git add .
+git commit -m "init: 初始化项目"
+
+# 第五步：在 GitHub 上创建空仓库 → 复制 SSH 地址
+# 打开 https://github.com/new → 填写名称 → 创建 → 复制地址
+
+# 第六步：关联远程并推送
+git remote add origin git@github.com:dxc-dxc/股票分析.git
+git push -u origin main
+```
+
+### 3.3 验证
+
+```bash
+git log --oneline      # 应有 1 个提交
+git remote -v          # 显示 fetch/push 地址
+```
+
+---
+
+## 四、配置自动同步
+
+### 4.1 CodeBuddy Automation（推荐）
+
+完成 Git 配置后，可以由 AI 创建自动同步任务：
+
+1. 在 CodeBuddy 中加载 `codebuddy-git-config` skill
+2. 输入"帮我配置自动同步"
+3. AI 会自动创建 Automation 任务
+
+自动化任务会：
+- 每日定时执行 git pull（拉取远程更新）
+- 检测本地变更并自动提交
+- 推送至 GitHub
+
+### 4.2 手动同步脚本
+
+```bash
+# 同步 codebuddy-config 仓库
+bash .codebuddy/skills/codebuddy-git-config/scripts/sync-config.sh
+
+# 同步指定工作区项目
+bash .codebuddy/skills/codebuddy-git-config/scripts/sync-config.sh ~/CodeBuddy/我的项目
+
+# 查看同步日志
+cat ~/.codebuddy/sync-config.log
+```
+
+### 4.3 常见同步问题
+
+| 问题 | 解决方法 |
+|------|---------|
+| `git pull` 冲突 | `git status` 查看冲突文件，手动解决后提交 |
+| `git push` 拒绝 | 先 `git pull` 合并远程变更 |
+| SSH 认证失败 | 检查 `ssh -T git@github.com` 是否正常 |
+
+---
+
+## 五、分支管理
+
+### 5.1 分支概念
 
 ```
 main ────●────●────●────●
@@ -140,7 +226,7 @@ feature-1      ●───●───●
 - `main`：主分支，保持稳定
 - `feature-*`：功能分支，开发完成后合并回 main
 
-### 3.2 分支操作
+### 5.2 分支操作
 
 ```bash
 # 查看分支
@@ -163,7 +249,7 @@ git branch -d feature-login         # 本地
 git push origin --delete feature-login  # 远程
 ```
 
-### 3.3 解决合并冲突
+### 5.3 解决合并冲突
 
 当两人修改同一文件时，Git 无法自动合并：
 
@@ -182,9 +268,9 @@ git commit         # 完成合并提交
 
 ---
 
-## 四、远程协作
+## 六、远程协作
 
-### 4.1 远程仓库操作
+### 6.1 远程仓库操作
 
 ```bash
 # 查看远程
@@ -202,7 +288,7 @@ git pull                  # fetch + merge
 git fetch                 # 仅获取，不合并
 ```
 
-### 4.2 同步工作流
+### 6.2 同步工作流
 
 ```
 新设备上开始工作前：
@@ -214,7 +300,7 @@ git commit -m "说明"
 git push          # 推送到 GitHub
 ```
 
-### 4.3 跨平台同步注意事项
+### 6.3 跨平台同步注意事项
 
 1. **先 pull 再干活** — 避免冲突
 2. **只传源码，不传依赖** — `node_modules/`、`venv/` 各平台独立安装
@@ -222,9 +308,9 @@ git push          # 推送到 GitHub
 
 ---
 
-## 五、进阶技巧
+## 七、进阶技巧
 
-### 5.1 修改最近提交
+### 7.1 修改最近提交
 
 ```bash
 # 修改提交信息
@@ -235,7 +321,7 @@ git add forgotten-file.md
 git commit --amend --no-edit
 ```
 
-### 5.2 暂存工作现场
+### 7.2 暂存工作现场
 
 ```bash
 # 保存当前未完成的工作（切分支前）
@@ -248,14 +334,14 @@ git stash apply      # 恢复但保留
 git stash list       # 查看所有 stash
 ```
 
-### 5.3 选择性地合并（cherry-pick）
+### 7.3 选择性地合并（cherry-pick）
 
 ```bash
 # 只取另一个分支的某个提交
 git cherry-pick <commit-hash>
 ```
 
-### 5.4 查看文件是谁改的
+### 7.4 查看文件是谁改的
 
 ```bash
 git blame filename.md
@@ -264,7 +350,7 @@ git blame filename.md
 
 ---
 
-## 六、常见误区
+## 八、常见误区
 
 ### ❌ 误区 1：`git add .` 后再用 `git add` 会覆盖
 
@@ -295,3 +381,4 @@ git reset --hard HEAD@{1}  # 恢复到上一步
 5. 使用 `.gitignore` 排除无用文件
 6. 敏感信息永远不提交
 7. 跨平台项目配置 `core.autocrlf`
+8. 配置自动化同步，避免手动遗漏

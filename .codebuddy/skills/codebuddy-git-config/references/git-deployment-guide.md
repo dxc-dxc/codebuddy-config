@@ -289,7 +289,77 @@ git clone git@github.com:dxc-dxc/codebuddy-config.git
 git clone https://github.com/dxc-dxc/codebuddy-config.git
 ```
 
-### 6.2 日常推送
+### 6.2 工作区项目发布至 GitHub（Phase 5）
+
+当需要在新的工作区项目（如 `codebuddy环境配置`、`股票分析` 等）上配置 GitHub 同步时，执行以下流程：
+
+#### 6.2.1 检测状态
+
+```bash
+cd /path/to/workspace
+git rev-parse --git-dir 2>/dev/null && echo "已初始化" || echo "未初始化"
+git remote -v 2>/dev/null || echo "无远程仓库"
+```
+
+#### 6.2.2 初始化（如未初始化）
+
+```bash
+git init
+git checkout -b main
+```
+
+#### 6.2.3 创建项目 .gitignore
+
+示例（参考 `.codebuddy/skills/codebuddy-git-config/SKILL.md` 的 Phase 5）：
+
+```gitignore
+# 操作系统文件
+.DS_Store
+Thumbs.db
+
+# CodeBuddy 工作文件
+.codebuddy/plans/
+
+# 环境变量
+.env
+.env.local
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# 编译
+node_modules/
+target/
+build/
+dist/
+__pycache__/
+```
+
+#### 6.2.4 关联远程仓库
+
+```bash
+git remote add origin git@github.com:dxc-dxc/[项目名称].git
+```
+
+#### 6.2.5 首次提交并推送
+
+```bash
+git add -A
+git commit -m "init: 初始化项目"
+git push -u origin main
+```
+
+#### 6.2.6 验证
+
+```bash
+git log --oneline
+git remote -v
+git branch -r
+```
+
+### 6.3 日常推送
 
 ```bash
 cd codebuddy-config
@@ -299,7 +369,7 @@ git commit -m "描述改动"  # 提交
 git push         # 推送
 ```
 
-### 6.3 拉取更新
+### 6.4 拉取更新
 
 ```bash
 cd codebuddy-config
@@ -308,9 +378,48 @@ git pull         # 拉取最新
 
 ---
 
-## 7. 故障排查
+## 7. 自动化同步配置
 
-### 7.1 网络问题
+### 7.1 创建 CodeBuddy Automation
+
+执行完基础配置后，使用 `automation_update` 工具创建每日同步任务：
+
+```bash
+# CodeBuddy Automation 会在 Phase 6 中由 AI 自动创建
+# 如需手动创建，在 CodeBuddy 中启用 Automations 功能
+# 并添加自动化任务，rrule 设为 FREQ=DAILY;BYHOUR=9;BYMINUTE=0
+```
+
+### 7.2 手动同步脚本
+
+同步脚本位置：`scripts/sync-config.sh`
+
+```bash
+# 同步 codebuddy-config 仓库
+bash .codebuddy/skills/codebuddy-git-config/scripts/sync-config.sh
+
+# 同步指定工作区项目
+bash .codebuddy/skills/codebuddy-git-config/scripts/sync-config.sh ~/CodeBuddy/我的项目
+
+# 查看同步日志
+cat ~/.codebuddy/sync-config.log
+```
+
+### 7.3 多设备同步策略
+
+| 场景 | 操作 |
+|------|------|
+| 首次部署新设备 | 执行 Phase 0→Phase 4 → 创建自动化 |
+| 工作区项目上线 | 执行 Phase 5 → 创建项目自动化 |
+| 日常使用 | 自动化每日执行 |
+| 紧急同步 | 手动运行 sync-config.sh |
+| 迁移/重装 | 重新执行 skill 流程 |
+
+---
+
+## 8. 故障排查
+
+### 8.1 网络问题
 
 ```bash
 # 检查 GitHub 连通性
@@ -326,7 +435,7 @@ git config --global --unset http.proxy
 git config --global --unset https.proxy
 ```
 
-### 7.2 SSH 问题
+### 8.2 SSH 问题
 
 ```bash
 # 详细调试
@@ -339,7 +448,7 @@ ssh-add -l
 ssh-add ~/.ssh/id_ed25519
 ```
 
-### 7.3 换行符问题
+### 8.3 换行符问题
 
 ```bash
 # 检查设置
@@ -350,7 +459,7 @@ git add --renormalize .
 git commit -m "规范化换行符"
 ```
 
-### 7.4 文件取消追踪
+### 8.4 文件取消追踪
 
 ```bash
 # 移除已追踪但应忽略的文件（保留本地副本）
@@ -358,3 +467,17 @@ git rm --cached <file>
 echo "<file>" >> .gitignore
 git commit -m "移除 <file> 并加入忽略"
 ```
+
+### 8.5 自动化同步失败
+
+```bash
+# 查看日志
+cat ~/.codebuddy/sync-config.log
+
+# 手动触发查看详细错误
+bash .codebuddy/skills/codebuddy-git-config/scripts/sync-config.sh 2>&1
+
+# 常见原因及解决方法
+# - SSH 密钥过期 → 重新 ssh-keygen + 添加到 GitHub
+# - 冲突未解决 → git status 查看冲突文件，手动解决
+# - 分支不匹配 → git branch --show-current 确认分支正确

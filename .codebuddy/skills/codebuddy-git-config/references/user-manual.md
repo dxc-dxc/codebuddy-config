@@ -29,7 +29,12 @@ codebuddy-config/
 ├── CodeBuddy-Git-部署工作流.md              # 部署文档
 └── .codebuddy/skills/codebuddy-git-config/ # Git 配置 skill
     ├── SKILL.md                            # AI 工作流定义
+    ├── scripts/
+    │   ├── export-skill-package.ps1        # 打包脚本（Windows）
+    │   └── sync-config.sh                  # 同步脚本（macOS/Linux）
     └── references/
+        ├── README.md                       # 英文安装说明
+        ├── README-CN.txt                   # 中文安装说明
         ├── git-deployment-guide.md         # 部署指南
         ├── git-learning-guide.md           # 学习文档
         └── user-manual.md                  # 本手册
@@ -52,7 +57,29 @@ git commit -m "docs: 更新配置说明"  # 5. 提交
 git push             # 6. 推送
 ```
 
-### 2.2 解决冲突
+### 2.2 工作区项目发布到 GitHub
+
+如果有一个新的工作区项目需要同步到 GitHub：
+
+```bash
+# 1. 进入项目目录
+cd ~/CodeBuddy/项目名
+
+# 2. 初始化并首次提交
+git init
+git checkout -b main
+git add .
+git commit -m "init: 初始化项目"
+
+# 3. 在 https://github.com/new 创建空仓库
+# 4. 关联远程并推送
+git remote add origin git@github.com:dxc-dxc/项目名.git
+git push -u origin main
+```
+
+或者直接告诉 CodeBuddy："帮我把这个项目推送到 GitHub"，AI 会引导你完成。
+
+### 2.3 解决冲突
 
 ```bash
 # 拉取时提示冲突
@@ -63,7 +90,7 @@ git commit -m "解决合并冲突"
 git push
 ```
 
-### 2.3 紧急回退
+### 2.4 紧急回退
 
 ```bash
 git reset --soft HEAD~1   # 撤回提交，保留修改
@@ -72,9 +99,42 @@ git reset --hard HEAD~1   # ⚠️ 彻底丢弃最近提交
 
 ---
 
-## 三、跨设备同步策略
+## 三、自动化同步
 
-### 3.1 多设备工作流
+### 3.1 CodeBuddy Automation
+
+完成配置后，skill 会创建每日自动同步任务：
+
+- **codebuddy-config 仓库**：每日 9:00 自动拉取 + 推送
+- **工作区项目**：每日 9:30 自动同步
+
+无需手动操作，AI 会自动完成。
+
+### 3.2 手动触发同步
+
+```bash
+# 同步 codebuddy-config
+bash .codebuddy/skills/codebuddy-git-config/scripts/sync-config.sh
+
+# 同步指定项目
+bash .codebuddy/skills/codebuddy-git-config/scripts/sync-config.sh ~/CodeBuddy/项目名
+
+# 查看同步日志
+cat ~/.codebuddy/sync-config.log
+```
+
+### 3.3 检查自动化状态
+
+在 CodeBuddy 中：
+1. 打开 Automation 面板
+2. 查看 `codebuddy-config-auto-sync` 任务状态
+3. 可手动触发或暂停
+
+---
+
+## 四、跨设备同步策略
+
+### 4.1 多设备工作流
 
 ```
 Windows PC  ←push/pull→  GitHub  ←push/pull→  MacBook / Linux
@@ -83,46 +143,22 @@ Windows PC  ←push/pull→  GitHub  ←push/pull→  MacBook / Linux
 **黄金法则**：
 - 修改后**立即推送**，换设备前**先拉取**
 - 同一时间只在一台设备上修改
-- 新设备上首次部署 → 加载本 skill → 自动执行
+- 利用自动化同步避免手动遗漏
 
-### 3.2 在新设备上运行 skill
+### 4.2 在新设备上运行 skill
 
 1. 打开 CodeBuddy，加载 `codebuddy-git-config` skill
 2. AI 自动执行：环境检测 → Git 配置 → 认证引导 → 克隆仓库
 3. 认证环节**交互式引导**，凭据不会写入文档
-4. 完成后自动生成学习文档和使用手册
+4. 完成后自动创建同步自动化
 
----
+### 4.3 离线传输 skill
 
-## 四、仓库维护
-
-### 4.1 提交内容管理
-
-| 文件 | 应提交 | 说明 |
-|------|--------|------|
-| `.gitignore` | ✅ | 项目忽略规则 |
-| `.codebuddy/skills/` | ✅ | AI skill 定义 |
-| `.codebuddy/plans/` | ❌ | AI 中间产物（已忽略） |
-| `.env` / Token | ❌ | 敏感信息（已忽略） |
-
-### 4.2 添加新文件
-
-```bash
-echo "新配置" > new-config.yaml
-git add new-config.yaml
-git commit -m "feat: 添加新配置"
-git push
-```
-
-### 4.3 移除误提交文件
-
-```bash
-git rm --cached 误提交的文件
-echo "误提交的文件" >> .gitignore
-git add .gitignore
-git commit -m "chore: 移除误提交文件"
-git push
-```
+在新设备无网络/无 Git 环境时：
+1. 在已配置的设备上运行 `scripts/export-skill-package.ps1` 打包
+2. 通过 U 盘/云盘传输
+3. 解压到 `.codebuddy/skills/` 目录
+4. 重启 CodeBuddy，输入"配置 Git 环境"
 
 ---
 
@@ -170,3 +206,5 @@ git push
 | 查看远程 | `git remote -v` |
 | 暂存现场 | `git stash` |
 | 恢复现场 | `git stash pop` |
+| 手动同步 | `bash scripts/sync-config.sh` |
+| 查看同步日志 | `cat ~/.codebuddy/sync-config.log` |
