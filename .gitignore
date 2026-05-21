@@ -1,0 +1,17 @@
+# === 项目专属 .gitignore ===
+# 全局规则已配置在 ~/.config/git/ignore（自动生效）
+# 此处只放本项目特有的忽略规则
+
+# CodeBuddy 工作文件（这些是 AI 生成的中间产物，不放版本仓库）
+.codebuddy/plans/
+
+# 环境变量/密钥（永远不要提交）
+.env
+.env.local
+.env.*.local
+
+# IDE 设置
+.idea/
+*.swp
+*.swo
+*~
