@@ -1,13 +1,13 @@
 ---
 name: codebuddy-git-config
-description: 在新设备上部署 CodeBuddy 的 Git 跨平台配置工作流。包含从零开始的 Git 安装、全局配置、GitHub 认证、仓库同步、自动化 daily sync 配置，以及自动生成 Git 学习文档和使用手册。应在用户提到"新设备部署"、"跨平台同步"、"配置 Git"、"新电脑 setup"、"自动同步"等场景时触发。涉及凭证操作时引导用户交互完成，不将凭据写入文档。
+description: 在新设备上部署 CodeBuddy 的 Git 跨平台配置工作流。包含从零开始的 Git 安装、全局配置、GitHub 认证、仓库同步、自动化 daily sync 配置、全局 skill 部署，以及自动生成 Git 学习文档和使用手册。应在用户提到"新设备部署"、"跨平台同步"、"配置 Git"、"新电脑 setup"、"自动同步"、"全局 skill"等场景时触发。涉及凭证操作时引导用户交互完成，不将凭据写入文档。
 ---
 
 # CodeBuddy Git 跨平台配置 Skill
 
 ## 概述
 
-在新设备上自动化完成 CodeBuddy Git 配置的全流程。涵盖环境检测、全局 Git 配置（跨平台兼容）、GitHub 认证引导、**工作区项目初始化并推送至 GitHub**、配置仓库同步，以及生成完整的 Git 学习文档和使用手册。
+在新设备上自动化完成 CodeBuddy Git 配置的全流程。涵盖环境检测、全局 Git 配置（跨平台兼容）、GitHub 认证引导、**工作区项目初始化并推送至 GitHub**、配置仓库同步、**skill 全局部署**，以及生成完整的 Git 学习文档和使用手册。
 
 ## 关键前提：先解决「鸡和蛋」问题
 
@@ -39,6 +39,7 @@ description: 在新设备上部署 CodeBuddy 的 Git 跨平台配置工作流。
                                     Phase 6: 配置自动化同步
                                     Phase 7: 生成文档（学习指南 + 使用手册）
                                     Phase 8: 验证清单
+                                    Phase 9: 全局 skill 部署（可选）
 ```
 
 ## 安全约束
@@ -437,6 +438,7 @@ git branch -r
 
 3. **部署工作流**（更新） — 更新 `CodeBuddy-Git-部署工作流.md`
    - 追加 Phase 5（工作区项目发布至 GitHub）和 Phase 6（自动化同步）的说明
+   - 追加 Phase 9（全局 skill 部署）的说明
 
 ### Phase 8: 验证清单
 
@@ -453,6 +455,90 @@ git branch -r
 | 7 | 工作区 | 推拉测试 | 修改文件后 `git push` | 推送成功 |
 | 8 | 自动化 | 自动化创建 | 查看 CodeBuddy → Automations | 显示同步任务列表 |
 | 9 | 自动化 | 首次执行 | 等待或手动触发 | 同步成功无错误 |
+| 10 | 全局部署 | skill 全局安装 | `ls ~/.codebuddy/skills/codebuddy-git-config/` | 显示 SKILL.md 等文件 |
+
+### Phase 9: 全局 skill 部署（可选）
+
+> **目标**：将 `codebuddy-git-config` skill 从项目级别同步至 CodeBuddy **全局 skills 目录**，使其在所有项目中可用。
+>
+> **全局目录位置**：`~/.codebuddy/skills/`
+
+#### 9.1 检测当前部署状态
+
+```bash
+# 检测全局目录是否存在
+ls ~/.codebuddy/skills/codebuddy-git-config/SKILL.md 2>/dev/null && echo "已部署至全局" || echo "未部署至全局"
+```
+
+#### 9.2 同步至全局目录
+
+```bash
+# 确定 skill 源路径（项目级别）
+SKILL_SRC=".codebuddy/skills/codebuddy-git-config"
+
+# 如果当前工作区未找到，尝试从 codebuddy-config 仓库获取
+if [ ! -d "$SKILL_SRC" ]; then
+    SKILL_SRC="$HOME/CodeBuddy/codebuddy-config/.codebuddy/skills/codebuddy-git-config"
+fi
+
+# 复制到全局目录
+cp -R "$SKILL_SRC" ~/.codebuddy/skills/codebuddy-git-config
+```
+
+**Windows PowerShell 版本：**
+```powershell
+# 源路径（项目级或配置仓库）
+$SkillSrc = ".codebuddy\skills\codebuddy-git-config"
+if (-not (Test-Path $SkillSrc)) {
+    $SkillSrc = "$env:USERPROFILE\CodeBuddy\codebuddy-config\.codebuddy\skills\codebuddy-git-config"
+}
+$GlobalDir = "$env:USERPROFILE\.codebuddy\skills\codebuddy-git-config"
+Copy-Item -Recurse -Force $SkillSrc $GlobalDir
+```
+
+#### 9.3 验证全局部署
+
+```bash
+ls ~/.codebuddy/skills/codebuddy-git-config/
+# 应显示：SKILL.md  references/  scripts/
+```
+
+#### 9.4 全局部署的价值
+
+将 skill 部署至全局后：
+
+- **所有项目共享**：在任何 CodeBuddy 项目中输入"帮我配置 Git"即可使用
+- **无需重复复制**：新项目无需再手动放置 skill 文件
+- **与 GitHub 同步**：全局 skill 更新后，可通过 `codebuddy-config` 仓库拉取最新版本，再覆盖至全局目录
+- **恢复便捷**：重装 IDE 后只需从 GitHub 克隆 + 部署全局即可
+
+#### 9.5 全局部署后更新 skill
+
+当 `codebuddy-config` 仓库中的 skill 有更新时：
+
+```bash
+# 1. 从 GitHub 拉取最新版本
+cd ~/CodeBuddy/codebuddy-config
+git pull origin main
+
+# 2. 覆盖全局 skill
+cp -R .codebuddy/skills/codebuddy-git-config ~/.codebuddy/skills/codebuddy-git-config
+
+# 3. 重启 CodeBuddy
+```
+
+#### 9.6 全局部署在部署流程中的位置
+
+```
+部署完整流程（供参考）：
+
+Phase 0→1→2→3→4→5→6→7→8  →  9 (可选：全局部署)
+                                  ↓
+                              skill 全局可用
+                              ↓
+                          新项目创建后，
+                          无需配置即可使用
+```
 
 ## 资源说明
 
@@ -478,6 +564,7 @@ git branch -r
 | 脚本 | 用途 |
 |------|------|
 | **`export-skill-package.ps1`** | 打包 skill 用于离线传输到新设备（Windows PowerShell） |
+| **`export-skill-package.sh`** | 打包 skill 用于离线传输到新设备（macOS / Linux） |
 | **`sync-config.sh`** | 配置仓库自动同步脚本（macOS/Linux），可手动触发或用于 crontab |
 
 #### sync-config.sh 用法

@@ -1,7 +1,7 @@
 ﻿# CodeBuddy Git 配置 Skill —— 离线安装包
 
 生成时间：{DATE}
-打包工具：export-skill-package.ps1
+打包工具：export-skill-package.ps1 / export-skill-package.sh
 
 ## 在新设备上安装方法
 
@@ -17,7 +17,14 @@
 2. 将 CodeBuddy-Git-部署工作流.md 复制到项目根目录
 3. 重启 CodeBuddy
 
-### 方法 C：安装后自动配置（AI 引导）
+### 方法 C：全局安装（多项目使用推荐）
+
+完成方法 A/B 和初始 Git 配置后，在 CodeBuddy 中输入：
+"**将 codebuddy-git-config skill 同步至全局环境**"
+
+AI 会将 skill 复制到 ~/.codebuddy/skills/ 目录，使其在所有项目中全局可用。
+
+### 方法 D：安装后自动配置（AI 引导）
 
 完成文件放置后，在 CodeBuddy 中输入以下任一指令：
 
@@ -33,6 +40,7 @@ AI 将自动引导你完成：
 4. 克隆配置仓库
 5. **工作区项目发布至 GitHub**（初始化 / 推送）
 6. **配置自动同步**（每日定时拉取推送）
+7. **skill 全局部署**（可选，供多项目使用）
 
 ---
 

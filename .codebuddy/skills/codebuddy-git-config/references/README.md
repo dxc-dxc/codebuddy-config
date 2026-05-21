@@ -1,7 +1,7 @@
 # CodeBuddy Git Config Skill — Offline Installation Package
 
 Generated: {DATE}
-Packaged by: export-skill-package.ps1
+Packaged by: export-skill-package.ps1 / export-skill-package.sh
 
 ## Installation on a New Device
 
@@ -17,7 +17,14 @@ Packaged by: export-skill-package.ps1
 2. Copy `CodeBuddy-Git-部署工作流.md` to the project root
 3. Restart CodeBuddy
 
-### Method C: AI-Guided Auto-Configuration
+### Method C: Global Installation (Recommended for Multi-Project Use)
+
+After completing Methods A/B and the initial Git setup, ask CodeBuddy:
+"**将 codebuddy-git-config skill 同步至全局环境**"
+
+The AI will copy the skill to `~/.codebuddy/skills/`, making it available across ALL projects.
+
+### Method D: AI-Guided Auto-Configuration
 
 After placing the files, ask CodeBuddy with one of these commands:
 
@@ -32,6 +39,7 @@ The AI will guide you through:
 4. Clone config repository
 5. **Publish workspace project to GitHub**
 6. **Configure auto-sync automation**
+7. **Deploy skill to global environment**
 
 ---
 

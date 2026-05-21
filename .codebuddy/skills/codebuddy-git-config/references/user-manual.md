@@ -31,6 +31,7 @@ codebuddy-config/
     ├── SKILL.md                            # AI 工作流定义
     ├── scripts/
     │   ├── export-skill-package.ps1        # 打包脚本（Windows）
+    │   ├── export-skill-package.sh         # 打包脚本（macOS/Linux）
     │   └── sync-config.sh                  # 同步脚本（macOS/Linux）
     └── references/
         ├── README.md                       # 英文安装说明
@@ -132,9 +133,53 @@ cat ~/.codebuddy/sync-config.log
 
 ---
 
-## 四、跨设备同步策略
+## 四、Skill 全局部署
 
-### 4.1 多设备工作流
+### 4.1 什么是全局部署
+
+将 `codebuddy-git-config` skill 从项目级别安装到 **全局 skills 目录**（`~/.codebuddy/skills/`），使其在所有 CodeBuddy 项目中都可用。
+
+### 4.2 何时需要全局部署
+
+- ✅ 你正在使用多个 CodeBuddy 项目
+- ✅ 你希望在创建设置 Git 环境时无需在每个项目中复制 skill
+- ✅ 你的团队共享一套 Git 配置
+
+### 4.3 如何部署全局
+
+在 CodeBuddy 中直接告诉 AI：
+```
+将 codebuddy-git-config skill 同步至全局环境
+```
+
+AI 会自动执行：
+
+```bash
+cp -R .codebuddy/skills/codebuddy-git-config ~/.codebuddy/skills/codebuddy-git-config
+```
+
+### 4.4 验证全局部署
+
+```bash
+ls ~/.codebuddy/skills/codebuddy-git-config/
+# 应显示：SKILL.md  references/  scripts/
+```
+
+### 4.5 更新全局 skill
+
+当 `codebuddy-config` 仓库中的 skill 更新后：
+
+```bash
+cd ~/CodeBuddy/codebuddy-config
+git pull origin main
+cp -R .codebuddy/skills/codebuddy-git-config ~/.codebuddy/skills/codebuddy-git-config
+```
+
+---
+
+## 五、跨设备同步策略
+
+### 5.1 多设备工作流
 
 ```
 Windows PC  ←push/pull→  GitHub  ←push/pull→  MacBook / Linux
@@ -145,40 +190,40 @@ Windows PC  ←push/pull→  GitHub  ←push/pull→  MacBook / Linux
 - 同一时间只在一台设备上修改
 - 利用自动化同步避免手动遗漏
 
-### 4.2 在新设备上运行 skill
+### 5.2 在新设备上运行 skill
 
 1. 打开 CodeBuddy，加载 `codebuddy-git-config` skill
 2. AI 自动执行：环境检测 → Git 配置 → 认证引导 → 克隆仓库
 3. 认证环节**交互式引导**，凭据不会写入文档
 4. 完成后自动创建同步自动化
 
-### 4.3 离线传输 skill
+### 5.3 离线传输 skill
 
 在新设备无网络/无 Git 环境时：
-1. 在已配置的设备上运行 `scripts/export-skill-package.ps1` 打包
+1. 在已配置的设备上运行 `scripts/export-skill-package.ps1` 或 `export-skill-package.sh` 打包
 2. 通过 U 盘/云盘传输
 3. 解压到 `.codebuddy/skills/` 目录
 4. 重启 CodeBuddy，输入"配置 Git 环境"
 
 ---
 
-## 五、安全指南
+## 六、安全指南
 
-### 5.1 严禁提交
+### 6.1 严禁提交
 
 - ❌ GitHub Token / Personal Access Token
 - ❌ SSH 私钥
 - ❌ 密码、API Key、数据库连接串
 - ❌ `.env` 文件
 
-### 5.2 正向做法
+### 6.2 正向做法
 
 - ✅ 敏感信息用 `.env.example` 作为模板
 - ✅ Token 使用 Git Credential Manager 安全存储
 - ✅ SSH 密钥使用密码短语保护
 - ✅ 定期轮换 Token
 
-### 5.3 意外提交了敏感信息
+### 6.3 意外提交了敏感信息
 
 1. 立即在 https://github.com/settings/tokens 撤销 Token
 2. 从 Git 历史中彻底清除：
@@ -191,7 +236,7 @@ Windows PC  ←push/pull→  GitHub  ←push/pull→  MacBook / Linux
 
 ---
 
-## 六、命令行速查表
+## 七、命令行速查表
 
 | 操作 | 命令 |
 |------|------|
@@ -208,3 +253,4 @@ Windows PC  ←push/pull→  GitHub  ←push/pull→  MacBook / Linux
 | 恢复现场 | `git stash pop` |
 | 手动同步 | `bash scripts/sync-config.sh` |
 | 查看同步日志 | `cat ~/.codebuddy/sync-config.log` |
+| 部署全局 skill | `cp -R codebuddy-git-config ~/.codebuddy/skills/` |

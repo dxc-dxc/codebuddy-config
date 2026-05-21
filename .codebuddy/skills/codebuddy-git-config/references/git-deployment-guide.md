@@ -468,7 +468,28 @@ echo "<file>" >> .gitignore
 git commit -m "移除 <file> 并加入忽略"
 ```
 
-### 8.5 自动化同步失败
+### 8.5 全局 skill 部署
+
+将 skill 从项目级安装到全局目录，使其在所有项目中可用：
+
+```bash
+# 检测全局目录是否存在
+ls ~/.codebuddy/skills/codebuddy-git-config/SKILL.md 2>/dev/null && echo "已部署" || echo "未部署"
+
+# 从项目级复制到全局
+cp -R .codebuddy/skills/codebuddy-git-config ~/.codebuddy/skills/codebuddy-git-config
+
+# 验证
+ls ~/.codebuddy/skills/codebuddy-git-config/
+# 输出：SKILL.md  references/  scripts/
+
+# 更新全局 skill（当仓库有更新时）
+cd ~/CodeBuddy/codebuddy-config
+git pull origin main
+cp -R .codebuddy/skills/codebuddy-git-config ~/.codebuddy/skills/codebuddy-git-config
+```
+
+### 8.6 自动化同步失败
 
 ```bash
 # 查看日志
