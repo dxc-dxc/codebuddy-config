@@ -1,13 +1,13 @@
 ---
 name: codebuddy-git-config
-description: 在新设备上部署 CodeBuddy 的 Git 跨平台配置工作流。包含从零开始的 Git 安装、全局配置、GitHub 认证、仓库同步，以及自动生成 Git 学习文档和使用手册。应在用户提到"新设备部署"、"跨平台同步"、"配置 Git"、"新电脑 setup"等场景时触发。涉及凭证操作时引导用户交互完成，不将凭据写入文档。
+description: 在新设备上部署 CodeBuddy 的 Git 跨平台配置工作流。包含从零开始的 Git 安装、全局配置、GitHub 认证、仓库同步、自动化 daily sync 配置，以及自动生成 Git 学习文档和使用手册。应在用户提到"新设备部署"、"跨平台同步"、"配置 Git"、"新电脑 setup"、"自动同步"等场景时触发。涉及凭证操作时引导用户交互完成，不将凭据写入文档。
 ---
 
 # CodeBuddy Git 跨平台配置 Skill
 
 ## 概述
 
-在新设备上自动化完成 CodeBuddy Git 配置的全流程。涵盖环境检测、全局 Git 配置（跨平台兼容）、GitHub 认证引导、配置仓库同步，以及生成完整的 Git 学习文档和使用手册。
+在新设备上自动化完成 CodeBuddy Git 配置的全流程。涵盖环境检测、全局 Git 配置（跨平台兼容）、GitHub 认证引导、**工作区项目初始化并推送至 GitHub**、配置仓库同步，以及生成完整的 Git 学习文档和使用手册。
 
 ## 关键前提：先解决「鸡和蛋」问题
 
@@ -34,9 +34,11 @@ description: 在新设备上部署 CodeBuddy 的 Git 跨平台配置工作流。
                                     Phase 1: 环境检测与安装
                                     Phase 2: 全局 Git 配置
                                     Phase 3: GitHub 认证（交互引导）
-                                    Phase 4: 仓库同步
-                                    Phase 5: 生成文档（学习指南 + 使用手册）
-                                    Phase 6: 验证清单
+                                    Phase 4: 克隆配置仓库（codebuddy-config）
+                                    Phase 5: 工作区项目发布至 GitHub
+                                    Phase 6: 配置自动化同步
+                                    Phase 7: 生成文档（学习指南 + 使用手册）
+                                    Phase 8: 验证清单
 ```
 
 ## 安全约束
@@ -63,7 +65,6 @@ description: 在新设备上部署 CodeBuddy 的 Git 跨平台配置工作流。
 
 ```powershell
 # 方法 A：运行打包脚本（推荐）
-# 该脚本位于 skill 的 scripts/ 目录下
 # ⚠️ 使用 Windows PowerShell (powershell.exe)，非 pwsh
 powershell -NoProfile -ExecutionPolicy Bypass -File ".codebuddy\skills\codebuddy-git-config\scripts\export-skill-package.ps1" -Destination "D:\USB_DRIVE\codebuddy-setup" -CreateZip
 
@@ -127,21 +128,19 @@ git --version 2>/dev/null || echo "Git 未安装"
 
 根据检测到的系统类型，输出对应 shell 的命令（Windows 用 PowerShell，其他用 Bash）：
 
-**跨平台核心配置清单**：
+**跨平台核心配置清单**（此处为默认示例值，执行时请询问用户的实际姓名和邮箱）：
 
 | 配置项 | 值 | 说明 |
 |--------|-----|------|
 | `user.name` | `dxc` | GitHub 提交者姓名 |
 | `user.email` | `1578330448@qq.com` | GitHub 关联邮箱 |
 | `init.defaultBranch` | `main` | 默认分支名 |
-| `core.autocrlf` | `true` | 换行符自动转换（Windows 核心） |
+| `core.autocrlf` | `input`（macOS/Linux）/ `true`（Windows） | 换行符自动转换 |
 | `core.safecrlf` | `warn` | 换行符异常警告 |
 | `core.filemode` | `false` | 忽略文件权限（跨平台关键） |
 | `core.longpaths` | `true` | 支持超长路径 |
 | `core.ignorecase` | `true` | 大小写不敏感 |
 | `pull.rebase` | `false` | 默认 merge 策略 |
-
-输出可一键复制的命令块。分 **PowerShell** 和 **Bash** 两种版本。
 
 **全局 .gitignore 配置**：
 
@@ -159,7 +158,7 @@ git --version 2>/dev/null || echo "Git 未安装"
 
 ```bash
 # 1. 生成 SSH 密钥（用户自行决定密码）
-ssh-keygen -t ed25519 -C "1578330448@qq.com"
+ssh-keygen -t ed25519 -C "user@example.com"
 
 # 2. 查看公钥并告知用户复制
 cat ~/.ssh/id_ed25519.pub
@@ -171,7 +170,7 @@ cat ~/.ssh/id_ed25519.pub
 
 # 4. 测试连接
 ssh -T git@github.com
-#   期望输出：Hi dxc-dxc! You've successfully authenticated...
+#   期望输出：Hi username! You've successfully authenticated...
 ```
 
 **方式 B：HTTPS + Token** — 引导用户：
@@ -186,7 +185,9 @@ ssh -T git@github.com
 - ⚠️ 建议设置 Token 过期时间
 - ⚠️ 完成后在浏览器中关闭 Token 页面
 
-### Phase 4: 仓库同步
+### Phase 4: 克隆配置仓库（codebuddy-config）
+
+> **目标**：将 `codebuddy-config` 配置仓库克隆到本地，该仓库包含跨设备共享的 skill、脚本和配置。
 
 克隆 `codebuddy-config` 配置仓库：
 
@@ -205,33 +206,253 @@ git log --oneline          # 应有提交历史
 git remote -v              # 显示远程仓库地址
 ```
 
-### Phase 5: 生成文档
+> 💡 此仓库后续用作自动化同步的目标（详见 Phase 6）。
+
+### Phase 5: 工作区项目发布至 GitHub
+
+> **目标**：将当前 CodeBuddy 工作区的项目（例如 `codebuddy环境配置`）初始化为 git 仓库，推送到 GitHub，并配置 AI 自动同步。
+>
+> **触发场景**：当 AI 检测到当前工作区是 git 仓库但无远程地址，或用户主动要求"将此项目同步到 GitHub"时，自动进入此阶段。
+>
+> **适用对象**：任意 CodeBuddy 工作区项目（不限于 codebuddy-config）。
+
+#### 5.1 检测工作区 Git 状态
+
+执行以下检测：
+
+```bash
+cd /path/to/workspace
+
+# 检测是否已是 git 仓库
+git rev-parse --git-dir 2>/dev/null && echo "已初始化" || echo "未初始化"
+
+# 检测是否有远程仓库
+git remote -v 2>/dev/null || echo "无远程仓库"
+
+# 检测分支名
+git branch --show-current
+
+# 检测暂存/未暂存的变更
+git status --short
+```
+
+#### 5.2 初始化 Git 仓库（如未初始化）
+
+如果工作区尚未初始化，执行：
+
+```bash
+git init
+git checkout -b main
+```
+
+#### 5.3 创建项目专属 .gitignore
+
+根据项目类型生成 `.gitignore`，合并全局规则与项目特有规则：
+
+**通用推荐（适用于任何工作区）：**
+
+```
+# 全局规则已在 ~/.config/git/ignore 中生效
+# 此处只放本项目特有的忽略规则
+
+# 操作系统文件
+.DS_Store
+Thumbs.db
+
+# CodeBuddy 工作文件（AI 中间产物，不提交）
+.codebuddy/plans/
+
+# 环境变量/密钥
+.env
+.env.local
+.env.*.local
+
+# IDE 设置
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# 编译/构建产物
+node_modules/
+target/
+build/
+dist/
+__pycache__/
+*.pyc
+*.pyo
+```
+
+#### 5.4 创建 GitHub 仓库（引导用户操作）
+
+> ⚠️ 此步骤需要用户交互，AI 不能自动创建 GitHub 仓库。
+
+**引导用户在浏览器中创建仓库：**
+
+```markdown
+请按以下步骤在 GitHub 上创建一个新仓库：
+
+1. 打开 https://github.com/new
+2. Repository name 填写：`[项目名称]`（例如 `codebuddy环境配置`）
+3. Description（可选）：添加简短描述
+4. 选择 **Public** 或 **Private**
+5. ⚠️ **不要**勾选 "Initialize this repository with" 中的任何选项（保持空仓库）
+6. 点击 **"Create repository"**
+
+创建完成后，复制 SSH 地址（格式：git@github.com:dxc-dxc/xxx.git）粘贴给我。
+```
+
+#### 5.5 关联远程仓库
+
+用户提供 SSH 地址后，执行：
+
+```bash
+git remote add origin git@github.com:dxc-dxc/[项目名称].git
+```
+
+#### 5.6 首次提交并推送
+
+```bash
+# 暂存所有文件
+git add -A
+
+# 首次提交
+git commit -m "init: 初始化项目"
+
+# 推送到 GitHub
+git push -u origin main
+```
+
+#### 5.7 验证推送结果
+
+```bash
+git log --oneline
+git remote -v
+# 检查远程分支
+git branch -r
+```
+
+#### 5.8 配置工作区自动同步
+
+执行 Phase 6 的第 6.2 节，为当前工作区创建独立的自动化同步任务。
+
+### Phase 6: 配置自动化同步（CodeBuddy Automation）
+
+> **目标**：创建 CodeBuddy Automation 任务，实现配置仓库和/或工作区项目的每日自动同步。
+> **适用场景**：多设备跨平台使用时，无需手动执行 git pull/push，由 AI 自动完成。
+
+#### 6.1 配置仓库（codebuddy-config）自动同步
+
+通过 `automation_update` 工具创建以下自动化：
+
+| 属性 | 值 |
+|------|-----|
+| **name** | `codebuddy-config-auto-sync` |
+| **scheduleType** | `recurring` |
+| **rrule** | `FREQ=DAILY;BYHOUR=9;BYMINUTE=0`（每日 9:00 执行） |
+| **status** | `ACTIVE` |
+| **cwds** | `~/CodeBuddy/codebuddy-config`（根据实际路径调整） |
+
+自动化 prompt 内容：
+
+```
+执行 codebuddy-config 配置仓库的自动同步。步骤如下：
+1. cd 到 codebuddy-config 目录
+2. git pull origin main（拉取远程最新配置）
+3. 检查是否有本地未提交变更（git status --porcelain）
+4. 如果有变更，执行 git add -A、git commit -m "auto-sync: $(date '+%Y-%m-%d %H:%M')"、git push origin main
+5. 记录同步结果到日志文件 ~/.codebuddy/sync-config.log
+
+如果遇到冲突或推送失败，在回复中报告错误信息。
+```
+
+#### 6.2 工作区项目自动同步
+
+执行完 Phase 5 后，视需要为工作区项目创建自动化：
+
+| 属性 | 值 |
+|------|-----|
+| **name** | `[项目名]-auto-sync` |
+| **scheduleType** | `recurring` |
+| **rrule** | `FREQ=DAILY;BYHOUR=9;BYMINUTE=30`（每日 9:30，与配置仓库错开） |
+| **status** | `ACTIVE` |
+| **cwds** | 工作区项目实际路径 |
+
+自动化 prompt 示例：
+
+```
+执行 [项目名] 工作区的自动同步。步骤如下：
+1. cd 到项目目录
+2. git pull origin main（拉取远程更新）
+3. 检查是否有本地未提交变更（git status --porcelain）
+4. 如果有变更，执行 git add -A、git commit -m "auto-sync: $(date '+%Y-%m-%d %H:%M')"、git push origin main
+
+如果遇到冲突或推送失败，在回复中报告错误信息。
+```
+
+#### 6.3 同步脚本（备用）
+
+`scripts/sync-config.sh` 提供了独立的 shell 同步脚本，可用于：
+
+- **手动触发**：`bash .codebuddy/skills/codebuddy-git-config/scripts/sync-config.sh`
+- **cron 定时**：在无法使用 CodeBuddy Automation 的环境下，通过系统 cron 调用
+- **故障排查**：脚本会产生日志 `~/.codebuddy/sync-config.log`，供排查同步问题
+
+#### 6.4 多设备同步策略
+
+| 场景 | 操作 |
+|------|------|
+| **首次部署新设备** | 执行 Phase 0→Phase 4 完成基础配置 → Phase 6 创建自动化 |
+| **工作区项目上线** | 执行 Phase 5 推送至 GitHub → Phase 6.2 创建项目自动化 |
+| **日常使用** | 自动化每日 9:00/9:30 执行，AI 自动完成 syncing |
+| **紧急同步** | 手动运行 `scripts/sync-config.sh` 或直接 git push |
+| **迁移/重装** | 重新执行整套 skill 流程 |
+
+#### 6.5 自动化验证
+
+创建自动化后，输出以下验证信息：
+
+```
+✅ 自动同步已配置
+   ┌─ 配置仓库（codebuddy-config）：每日 9:00
+   ├─ [项目名]（工作区）：每日 9:30
+   ├─ 日志：~/.codebuddy/sync-config.log
+   └─ 下次执行时间：[下次执行时间]
+```
+
+### Phase 7: 生成文档
 
 完成配置后，输出两份文档文件路径，供用户审阅后提交：
 
 1. **Git 学习指南** — 生成到 `references/git-learning-guide.md`
    - 目标：帮助用户系统学习 Git
    - 内容结构参见 `references/git-learning-guide.md`
+   - **新增内容**：工作区项目发布流程、自动化同步说明
 
 2. **使用手册** — 生成到 `references/user-manual.md`
    - 目标：日常使用指引
    - 内容结构参见 `references/user-manual.md`
+   - **新增内容**：如何让 AI 帮你推送项目到 GitHub
 
 3. **部署工作流**（更新） — 更新 `CodeBuddy-Git-部署工作流.md`
-   - 已存在于项目根目录，更新内容
+   - 追加 Phase 5（工作区项目发布至 GitHub）和 Phase 6（自动化同步）的说明
 
-### Phase 6: 验证清单
+### Phase 8: 验证清单
 
 输出以下验证清单供用户执行：
 
-| # | 检查项 | 命令 | 期望结果 |
-|---|--------|------|---------|
-| 1 | Git 安装 | `git --version` | 版本号 > 2.0 |
-| 2 | 全局配置 | `git config --global --list` | 所有配置项已包含 |
-| 3 | 全局 .gitignore | `git config --global core.excludesFile` | 输出文件路径 |
-| 4 | SSH 认证 | `ssh -T git@github.com` | Successfully authenticated |
-| 5 | 仓库克隆 | `ls codebuddy-config/` | 显示 .gitignore 等文件 |
-| 6 | 推拉测试 | 修改文件后 `git push` | 推送成功 |
+| # | 阶段 | 检查项 | 命令 | 期望结果 |
+|---|------|--------|------|---------|
+| 1 | 基础 | Git 安装 | `git --version` | 版本号 > 2.0 |
+| 2 | 基础 | 全局配置 | `git config --global --list` | 所有配置项已包含 |
+| 3 | 基础 | 全局 .gitignore | `git config --global core.excludesFile` | 输出文件路径 |
+| 4 | 认证 | SSH 认证 | `ssh -T git@github.com` | Successfully authenticated |
+| 5 | 配置仓库 | 仓库克隆 | `ls ~/CodeBuddy/codebuddy-config/` | 显示 .gitignore 等文件 |
+| 6 | 工作区 | GitHub 远程 | `git remote -v`（工作区目录） | 显示 push/fetch 地址 |
+| 7 | 工作区 | 推拉测试 | 修改文件后 `git push` | 推送成功 |
+| 8 | 自动化 | 自动化创建 | 查看 CodeBuddy → Automations | 显示同步任务列表 |
+| 9 | 自动化 | 首次执行 | 等待或手动触发 | 同步成功无错误 |
 
 ## 资源说明
 
@@ -249,3 +470,25 @@ git remote -v              # 显示远程仓库地址
 
 - skill 参考文档：`.codebuddy/skills/codebuddy-git-config/references/`
 - 用户可见文档：项目根目录 `CodeBuddy-Git-部署工作流.md`
+
+### scripts/
+
+此 skill 包含以下脚本：
+
+| 脚本 | 用途 |
+|------|------|
+| **`export-skill-package.ps1`** | 打包 skill 用于离线传输到新设备（Windows PowerShell） |
+| **`sync-config.sh`** | 配置仓库自动同步脚本（macOS/Linux），可手动触发或用于 crontab |
+
+#### sync-config.sh 用法
+
+```bash
+# 手动触发同步（默认同步 codebuddy-config 仓库）
+bash .codebuddy/skills/codebuddy-git-config/scripts/sync-config.sh
+
+# 手动触发同步（指定工作区项目）
+bash .codebuddy/skills/codebuddy-git-config/scripts/sync-config.sh /path/to/your/project
+
+# 查看同步日志
+cat ~/.codebuddy/sync-config.log
+```
